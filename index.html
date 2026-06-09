@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WG Manager</title>
+
+  <!-- FIREBASE WERKZEUGE LADEN -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #121212;
+      --surface: #1e1e1e;
+      --accent: #4ade80;
+      --text: #ffffff;
+      --muted: #a0a0a0;
+      --radius: 12px;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-bottom: 40px;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--accent);
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: var(--surface);
+      padding: 20px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 10px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #2a2a2a;
+      color: white;
+    }
+
+    button {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:hover { opacity: 0.8; }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      background: #2a2a2a;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    li .item-text {
+      flex: 1;
+      word-break: break-word; 
+    }
+
+    .delete-btn {
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .delete-btn:hover { transform: scale(1.2); }
+
+    .link-btn {
+      display: inline-block;
+      background: #333;
+      color: var(--accent);
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 12px;
+      margin-top: 4px;
+      border: 1px solid #444;
+    }
+
+    .link-btn:hover { background: #444; }
+
+    .job-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #333;
+    }
+    
+    .job-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .job-name { color: var(--text); }
+    
+    .person { 
+      font-weight: bold; 
+      color: var(--accent); 
+      cursor: pointer; 
+      background: #2a2a2a;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .person:hover { background: #333; }
+
+    .checkbox {
+      cursor: pointer;
+      font-size: 20px;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏠 WG Manager</h1>
+
+  <!-- Teil 1: Einkaufsliste -->
+  <div class="card">
+    <h2>🛒 Einkaufsliste</h2>
+    <div class="input-group">
+      <input type="text" id="itemInput" placeholder="Was brauchen wir?">
+      <button onclick="addShoppingItem()">Dazu</button>
+    </div>
+    <ul id="shoppingList">
+      <!-- Wird jetzt aus Firebase geladen -->
+    </ul>
+  </div>
+
+  <!-- Teil 2: WG Jobs -->
+  <div class="card">
+    <h2>🧹 Job Rotation</h2>
+    <p style="font-size: 12px; color: var(--muted); margin-top: 0;">Auf Namen oder Job klicken zum Ändern.</p>
+    <div id="jobList">
+      <!-- Wird aus Firebase geladen -->
+    </div>
+    <button onclick="rotateJobs()" style="width: 100%; margin-top: 15px; background: #333; color: white;">Nächste Woche starten</button>
+  </div>
+
+  <!-- Teil 3: Notizen & To-dos -->
+  <div class="card">
+    <h2>📝 Notizen & To-dos</h2>
+    <div class="input-group">
+      <input type="text" id="noteInput" placeholder="Notiz oder Link hier rein...">
+      <button onclick="addNote()">Dazu</button>
+    </div>
+    <ul id="noteList">
+      <!-- Wird aus Firebase geladen -->
+    </ul>
+  </div>
+
+  <script>
+    // --- 1. FIREBASE STARTEN ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCmiRxVD9uxMBV_6SwQr2_c83ZrfUYHnuA",
+      authDomain: "wg-manager-9637e.firebaseapp.com",
+      databaseURL: "https://wg-manager-9637e-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "wg-manager-9637e",
+      storageBucket: "wg-manager-9637e.firebasestorage.app",
+      messagingSenderId: "961103814270",
+      appId: "1:961103814270:web:7936ef5e9c4d200b59822f"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+
+    // --- 2. EINKAUFSLISTE CLOUD LOGIK ---
+    
+    // Daten aus der Cloud lesen
+    db.ref("shoppingList").on("value", (snapshot) => {
+      let list = document.getElementById("shoppingList");
+      list.innerHTML = ""; // Liste leeren
+      
+      snapshot.forEach((child) => {
+        let key = child.key; // Die geheime ID des Eintrags in der Datenbank
+        let text = child.val().text;
+
+        list.innerHTML += `
+          <li>
+            <span class="item-text">${text}</span>
+            <span class="delete-btn" onclick="deleteShoppingItem('${key}')">❌</span>
+          </li>
+        `;
+      });
+    });
+
+    function addShoppingItem() {
+      let inputField = document.getElementById("itemInput");
+      if (inputField.value.trim() === "") return;
+      
+      // Anstatt lokal zu schreiben, schicken wir es an Firebase ("push")
+      db.ref("shoppingList").push({ text: inputField.value.trim() });
+      inputField.value = "";
+    }
+
+    function deleteShoppingItem(key) {
+      db.ref("shoppingList/" + key).remove(); // Löscht den Eintrag aus der Datenbank
+    }
+
+
+    // --- 3. NOTIZEN CLOUD LOGIK ---
+
+    db.ref("notes").on("value", (snapshot) => {
+      let list = document.getElementById("noteList");
+      list.innerHTML = "";
+      
+      snapshot.forEach((child) => {
+        let key = child.key;
+        let text = child.val().text;
+
+        let urlRegex = /(https?:\/\/[^\s]+)/g;
+        let formattedText = text.replace(urlRegex, function(url) {
+          return `<br><a href="${url}" target="_blank" class="link-btn">🔗 Link öffnen</a>`;
+        });
+
+        list.innerHTML += `
+          <li>
+            <span class="item-text">${formattedText}</span>
+            <span class="delete-btn" onclick="deleteNote('${key}')">❌</span>
+          </li>
+        `;
+      });
+    });
+
+    function addNote() {
+      let inputField = document.getElementById("noteInput");
+      if (inputField.value.trim() === "") return;
+      
+      db.ref("notes").push({ text: inputField.value.trim() });
+      inputField.value = "";
+    }
+
+    function deleteNote(key) {
+      db.ref("notes/" + key).remove();
+    }
+
+
+    // --- 4. WG JOBS CLOUD LOGIK ---
+
+    // Unsere Basis-Werte, falls die Datenbank noch leer ist
+    let roommates = ["Levi", "Mitbewohner 1", "Mitbewohner 2"];
+    let jobs = ["Müll & Altglas", "Küche & Bad", "Böden saugen"];
+    let jobStatus = [false, false, false];
+
+    // Daten laden und anzeigen
+    db.ref("jobData").on("value", (snapshot) => {
+      let data = snapshot.val();
+      
+      // Wenn es schon Daten in der Cloud gibt, überschreiben wir unsere Basis-Werte
+      if (data) {
+        roommates = data.roommates || roommates;
+        jobs = data.jobs || jobs;
+        jobStatus = data.jobStatus || jobStatus;
+      }
+      
+      renderJobsLocal();
+    });
+
+    // Hilfsfunktion: Speichert den aktuellen Stand an Firebase
+    function saveJobsToFirebase() {
+      db.ref("jobData").set({
+        roommates: roommates,
+        jobs: jobs,
+        jobStatus: jobStatus
+      });
+    }
+
+    function renderJobsLocal() {
+      let jobContainer = document.getElementById("jobList");
+      jobContainer.innerHTML = ""; 
+
+      for (let i = 0; i < jobs.length; i++) {
+        let checkIcon = jobStatus[i] ? "✅" : "🔲";
+        let textStyle = jobStatus[i] ? "text-decoration: line-through; color: var(--muted);" : "";
+
+        jobContainer.innerHTML += `
+          <div class="job-row">
+            <div class="job-left">
+              <span class="checkbox" onclick="toggleJob(${i})">${checkIcon}</span>
+              <span class="job-name" style="${textStyle}; cursor: pointer;" onclick="editJob(${i})" title="Aufgabe ändern">${jobs[i]} ✏️</span>
+            </div>
+            <span class="person" onclick="editName(${i})" title="Name ändern">${roommates[i]} ✏️</span>
+          </div>
+        `;
+      }
+    }
+
+    function toggleJob(index) {
+      jobStatus[index] = !jobStatus[index]; 
+      saveJobsToFirebase(); // Bei jedem Klick speichern
+    }
+
+    function editName(index) {
+      let newName = prompt("Wer übernimmt diesen Job?", roommates[index]);
+      if (newName !== null && newName.trim() !== "") {
+        roommates[index] = newName.trim();
+        saveJobsToFirebase();
+      }
+    }
+
+    function editJob(index) {
+      let newJob = prompt("Wie soll die Aufgabe heißen?", jobs[index]);
+      if (newJob !== null && newJob.trim() !== "") {
+        jobs[index] = newJob.trim();
+        saveJobsToFirebase();
+      }
+    }
+
+    function rotateJobs() {
+      let lastPerson = roommates.pop(); 
+      roommates.unshift(lastPerson); 
+      jobStatus = new Array(jobs.length).fill(false);
+      saveJobsToFirebase(); 
+    }
+
+  </script>
+</body>
+</html>
