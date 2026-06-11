@@ -155,7 +155,18 @@
 
     // --- PLATZHALTER EINSTELLUNGEN ---
     function openSettings() {
-      alert("Hier kommt später das sichere Feld für den KI-Schlüssel hin!");
+      let currentKey = localStorage.getItem("geminiApiKey") || "";
+      let newKey = prompt("Google Gemini API Key einfügen:\n(Wird nur lokal auf deinem Handy gespeichert!)", currentKey);
+      
+      if (newKey !== null) {
+        if (newKey.trim() !== "") {
+          localStorage.setItem("geminiApiKey", newKey.trim());
+          alert("✅ API-Schlüssel gespeichert!");
+        } else {
+          localStorage.removeItem("geminiApiKey");
+          alert("🗑️ API-Schlüssel gelöscht.");
+        }
+      }
     }
 
     // --- EINKAUF & NOTIZEN & JOBS (Unverändert komprimiert) ---
@@ -170,7 +181,6 @@
     function rotateJobs() { roommates.unshift(roommates.pop()); jobStatus=[false,false,false]; saveJobsToFirebase(); }
 
     // --- NEU: WG KASSE & LOGIK ---
-   <button class="scan-btn" onclick="window.location.href='scanner.html'">📸 Bon scannen (KI-Modus)</button>
     let splitNames = ["Mitbewohner", "Du", "Bruder"];
     let balances = [0, 0, 0];
     let hasBackup = false;
