@@ -12,7 +12,6 @@
     :root { --bg: #121212; --surface: #1e1e1e; --accent: #4ade80; --text: #ffffff; --muted: #a0a0a0; --radius: 12px; }
     body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 20px; padding-bottom: 60px; overflow-x: hidden; }
     
-    /* Header mit Einstellungs-Button */
     .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
     h1 { color: var(--accent); margin: 0; font-size: 24px;}
     .settings-btn { background: #2a2a2a; border: 1px solid #444; color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -35,16 +34,14 @@
     .person { font-weight: bold; color: var(--accent); cursor: pointer; background: #2a2a2a; padding: 4px 8px; border-radius: 6px; font-size: 14px; }
     .checkbox { cursor: pointer; font-size: 20px; user-select: none; }
 
-    /* --- WG KASSE (SPLITWISE) --- */
+    /* WG KASSE */
     .balance-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #333; font-size: 16px; }
     .balance-row:last-child { border-bottom: none; }
     .balance-amount { font-weight: bold; font-family: monospace; font-size: 18px; }
     .plus { color: var(--accent); }
     .minus { color: #ef4444; }
     .zero { color: var(--muted); }
-    
     select { background: #2a2a2a; color: white; border: 1px solid #444; padding: 12px; border-radius: 8px; width: 100%; margin-bottom: 10px; font-size: 16px; font-family: inherit;}
-
     .scan-btn { width: 100%; margin-bottom: 15px; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; font-size: 16px;}
     
     .swipe-container { position: relative; height: 220px; display: flex; justify-content: center; align-items: center; margin-top: 15px; }
@@ -52,12 +49,14 @@
     .swipe-card.dragging { transition: none; cursor: grabbing; }
     .swipe-card.hidden { display: none; }
     
+    /* Lade-Animation */
+    .loading-pulse { animation: pulse 1.5s infinite; background: #f5c800; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
     .item-name { font-size: 20px; font-weight: bold; margin-bottom: 10px; text-align: center; padding: 0 10px;}
     .item-price { font-size: 18px; font-weight: bold; background: #000; color: var(--accent); padding: 5px 15px; border-radius: 20px;}
-
     .instructions { text-align: center; color: var(--muted); font-size: 12px; margin-top: 15px; line-height: 1.6; }
     .done-message { position: absolute; color: var(--muted); font-size: 16px; text-align: center; }
-
     .btn-group { display: flex; gap: 10px; margin-top: 15px; }
     .btn-settle { flex: 2; background: #ef4444; color: white; }
     .btn-undo { flex: 1; background: #333; color: white; }
@@ -80,7 +79,7 @@
   <div class="card">
     <h2>🧹 Job Rotation</h2>
     <div id="jobList"></div>
-    <button onclick="rotateJobs()" style="width: 100%; margin-top: 15px; background: #333; color: white;">Nächste Woche starten</button>
+    <button onclick="rotateJobs()" style="width: 100%; margin-top: 15px; background: #333; color: white;">Nächste Woche</button>
   </div>
 
   <div class="card">
@@ -89,7 +88,7 @@
     <ul id="noteList"></ul>
   </div>
 
-  <!-- NEU: Das WG Kassenbuch -->
+  <!-- WG Kasse -->
   <div class="card">
     <h2>💸 WG Kasse</h2>
     
@@ -107,12 +106,12 @@
     </div>
 
     <div class="btn-group">
-      <button class="btn-settle" onclick="settleUp()">🧹 Abrechnen (Auf Null)</button>
+      <button class="btn-settle" onclick="settleUp()">🧹 Auf Null</button>
       <button class="btn-undo" id="undoBtn" onclick="undoSettle()" disabled>↩️ Zurück</button>
     </div>
   </div>
 
-  <!-- NEU: Der Scanner (Jetzt mit Bezahl-Auswahl) -->
+  <!-- Der Scanner mit echtem Kamera-Zugriff -->
   <div class="card">
     <h2>📸 Bon Scannen</h2>
     
@@ -122,10 +121,14 @@
       <option value="2" id="opt2">Bruder hat bezahlt</option>
     </select>
 
-    <button class="scan-btn" onclick="startFakeScan()">📸 Kassenzettel scannen (KI)</button>
+    <!-- Der unsichtbare Datei-Upload, der die Handykamera öffnet (capture="environment" = Rückkamera) -->
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" onchange="processReceipt(event)">
+    
+    <!-- Unser schöner Button, der den unsichtbaren Upload auslöst -->
+    <button class="scan-btn" onclick="document.getElementById('cameraInput').click()">📸 Kamera öffnen</button>
 
     <div class="swipe-container" id="swipeContainer">
-      <div class="done-message">Bon komplett verteilt! 🎉</div>
+      <div class="done-message">Alles gesplittet! 🎉</div>
       <div class="swipe-card hidden" id="card">
         <div class="item-name" id="itemName">Lädt...</div>
         <div class="item-price" id="itemPrice">-</div>
@@ -140,7 +143,7 @@
   </div>
 
   <script>
-    // --- FIREBASE STARTEN ---
+    // --- 1. FIREBASE STARTEN ---
     const firebaseConfig = {
       apiKey: "AIzaSyCmiRxVD9uxMBV_6SwQr2_c83ZrfUYHnuA",
       authDomain: "wg-manager-9637e.firebaseapp.com",
@@ -153,12 +156,18 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- PLATZHALTER EINSTELLUNGEN ---
+    // --- 2. EINSTELLUNGEN (API KEY SPEICHERN) ---
     function openSettings() {
-      alert("Hier kommt später das sichere Feld für den KI-Schlüssel hin!");
+      let currentKey = localStorage.getItem("geminiApiKey") || "";
+      let newKey = prompt("Google Gemini API Key einfügen:\n(Wird nur lokal auf deinem Handy gespeichert!)", currentKey);
+      
+      if (newKey !== null && newKey.trim() !== "") {
+        localStorage.setItem("geminiApiKey", newKey.trim());
+        alert("✅ API-Schlüssel erfolgreich gespeichert! Die Kamera ist bereit.");
+      }
     }
 
-    // --- EINKAUF & NOTIZEN & JOBS (Unverändert komprimiert) ---
+    // --- 3. EINKAUF, NOTIZEN & JOBS ---
     db.ref("shoppingList").on("value", (s) => { let l = document.getElementById("shoppingList"); l.innerHTML = ""; s.forEach((c) => { l.innerHTML += `<li><span class="item-text">${c.val().text}</span><span class="delete-btn" onclick="db.ref('shoppingList/${c.key}').remove()">❌</span></li>`; }); });
     function addShoppingItem() { let i = document.getElementById("itemInput"); if (i.value.trim() !== "") { db.ref("shoppingList").push({ text: i.value.trim() }); i.value = ""; } }
     db.ref("notes").on("value", (s) => { let l = document.getElementById("noteList"); l.innerHTML = ""; s.forEach((c) => { let t = c.val().text.replace(/(https?:\/\/[^\s]+)/g, `<br><a href="$1" target="_blank" class="link-btn">🔗 Link</a>`); l.innerHTML += `<li><span class="item-text">${t}</span><span class="delete-btn" onclick="db.ref('notes/${c.key}').remove()">❌</span></li>`; }); });
@@ -169,87 +178,102 @@
     function renderJobsLocal() { let jc = document.getElementById("jobList"); jc.innerHTML = ""; for(let i=0; i<jobs.length; i++){ let style = jobStatus[i] ? "text-decoration: line-through; color: var(--muted);" : ""; jc.innerHTML += `<div class="job-row"><div class="job-left"><span class="checkbox" onclick="jobStatus[${i}]=!jobStatus[${i}]; saveJobsToFirebase()">${jobStatus[i] ? "✅" : "🔲"}</span><span class="job-name" style="${style}; cursor:pointer;" onclick="let j=prompt('Job?',jobs[${i}]); if(j){jobs[${i}]=j.trim(); saveJobsToFirebase();}">${jobs[i]} ✏️</span></div><span class="person" onclick="let n=prompt('Wer?',roommates[${i}]); if(n){roommates[${i}]=n.trim(); saveJobsToFirebase();}">${roommates[i]} ✏️</span></div>`; } }
     function rotateJobs() { roommates.unshift(roommates.pop()); jobStatus=[false,false,false]; saveJobsToFirebase(); }
 
-    // --- NEU: WG KASSE & LOGIK ---
+    // --- 4. WG KASSE ---
     let splitNames = ["Mitbewohner", "Du", "Bruder"];
     let balances = [0, 0, 0];
     let hasBackup = false;
 
-    // Lade Namen
-    db.ref("splitNames").on("value", (s) => {
-      if (s.val()) splitNames = s.val();
-      for(let i=0; i<3; i++) {
-        document.getElementById("name"+i).innerText = `${splitNames[i]} ✏️`;
-        document.getElementById("opt"+i).innerText = `${splitNames[i]} hat bezahlt`;
-      }
-    });
+    db.ref("splitNames").on("value", (s) => { if (s.val()) splitNames = s.val(); for(let i=0; i<3; i++) { document.getElementById("name"+i).innerText = `${splitNames[i]} ✏️`; document.getElementById("opt"+i).innerText = `${splitNames[i]} hat bezahlt`; } });
+    function editSplitName(i) { let n = prompt("Wie heißt diese Person?", splitNames[i]); if (n && n.trim() !== "") { splitNames[i] = n.trim(); db.ref("splitNames").set(splitNames); } }
 
-    function editSplitName(i) {
-      let n = prompt("Wie heißt diese Person?", splitNames[i]);
-      if (n && n.trim() !== "") { splitNames[i] = n.trim(); db.ref("splitNames").set(splitNames); }
-    }
-
-    // Lade Kontostände und Backup-Status
-    db.ref("balances").on("value", (s) => {
-      if (s.val()) balances = s.val();
-      updateBalanceUI();
-    });
-
-    db.ref("backupBalances").on("value", (s) => {
-      hasBackup = s.val() !== null;
-      document.getElementById("undoBtn").disabled = !hasBackup;
-    });
+    db.ref("balances").on("value", (s) => { if (s.val()) balances = s.val(); updateBalanceUI(); });
+    db.ref("backupBalances").on("value", (s) => { hasBackup = s.val() !== null; document.getElementById("undoBtn").disabled = !hasBackup; });
 
     function updateBalanceUI() {
       for(let i=0; i<3; i++) {
         let el = document.getElementById("bal"+i);
         let val = balances[i];
         el.innerText = (val > 0 ? "+" : "") + val.toFixed(2) + " €";
-        
-        // Farben zuweisen
         el.className = "balance-amount " + (val > 0.01 ? "plus" : (val < -0.01 ? "minus" : "zero"));
       }
     }
 
-    // Abrechnen und Backup
-    function settleUp() {
-      if(confirm("Soll der Kassenstand auf 0 gesetzt werden? (Keine Sorge, du kannst es rückgängig machen)")) {
-        db.ref("backupBalances").set(balances); // Speichere aktuelles Backup
-        balances = [0, 0, 0];
-        db.ref("balances").set(balances);
-      }
-    }
+    function settleUp() { if(confirm("Kasse nullen? (Rückgängig machen möglich)")) { db.ref("backupBalances").set(balances); balances = [0, 0, 0]; db.ref("balances").set(balances); } }
+    function undoSettle() { db.ref("backupBalances").once("value", (s) => { if(s.val()) { db.ref("balances").set(s.val()); db.ref("backupBalances").remove(); } }); }
 
-    function undoSettle() {
-      db.ref("backupBalances").once("value", (s) => {
-        if(s.val()) {
-          db.ref("balances").set(s.val()); // Altes Backup wiederherstellen
-          db.ref("backupBalances").remove(); // Backup löschen, damit man nicht 2x klickt
-        }
-      });
-    }
-
-    // --- SWIPE LOGIK FÜR DIE KASSE ---
-    let receipt = [
-      { name: "Räuchertofu", price: 2.19 },
-      { name: "Hafermilch", price: 2.49 },
-      { name: "Spülmittel", price: 1.50 },
-      { name: "Toilettenpapier", price: 3.99 },
-      { name: "Hummus", price: 1.99 }
-    ];
-
+    // --- 5. ECHTER KAMERA SCANNER & KI ANBINDUNG ---
+    let receipt = [];
     let currentItemIndex = 0;
     const card = document.getElementById("card");
     const itemNameDisplay = document.getElementById("itemName");
     const itemPriceDisplay = document.getElementById("itemPrice");
 
-    function startFakeScan() {
-      alert("📸 KI-Scanner Platzhalter.\nJetzt Bon verteilen!");
-      currentItemIndex = 0;
-      loadNextItem();
+    // Diese Funktion wird gestartet, wenn du ein Foto gemacht hast
+    async function processReceipt(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const apiKey = localStorage.getItem("geminiApiKey");
+      if (!apiKey) {
+        alert("⚠️ Fehler: Bitte klicke zuerst oben auf das Zahnrad (⚙️) und füge deinen API-Schlüssel ein!");
+        return;
+      }
+
+      // UI: Lade-Animation anzeigen
+      card.classList.remove("hidden");
+      card.classList.add("loading-pulse");
+      itemNameDisplay.innerText = "Analysiere...";
+      itemPriceDisplay.innerText = "Bitte warten ⏳";
+
+      // Bild für die KI vorbereiten (in Base64 umwandeln)
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async function() {
+        // Wir nehmen nur den reinen Bildcode nach dem Komma
+        const base64Image = reader.result.split(',')[1]; 
+        
+        try {
+          // Wir rufen die Google KI an
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: "Lies diesen Kassenzettel. Gib mir AUSSCHLIESSLICH ein sauberes JSON-Array zurück. Jedes Objekt muss 'name' (String, kurzer Name des Artikels) und 'price' (Number, als Punkt-Kommawert z.B. 2.99) haben. Lass Rabatte weg. Keine Erklärung, kein Markdown, nur das nackte JSON-Array. Beispiel: [{\"name\":\"Milch\",\"price\":1.50}]" },
+                  { inline_data: { mime_type: file.type, data: base64Image } }
+                ]
+              }]
+            })
+          });
+          
+          const data = await response.json();
+          
+          if(data.error) throw new Error(data.error.message);
+
+          // Antwort der KI bereinigen (manchmal schickt sie ```json ... 
+``` mit)
+          let jsonString = data.candidates[0].content.parts[0].text;
+          jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
+          
+          // Den Text in eine echte Liste umwandeln
+          receipt = JSON.parse(jsonString);
+          currentItemIndex = 0;
+          
+          // Lade-Animation stoppen und loslegen
+          card.classList.remove("loading-pulse");
+          loadNextItem();
+
+        } catch (error) {
+          alert("Fehler beim Analysieren des Bons!\n" + error.message);
+          card.classList.remove("loading-pulse");
+          card.classList.add("hidden");
+        }
+      };
     }
 
     function loadNextItem() {
-      if (currentItemIndex < receipt.length) {
+      if (receipt && currentItemIndex < receipt.length) {
         card.classList.remove("hidden");
         let item = receipt[currentItemIndex];
         itemNameDisplay.innerText = item.name;
@@ -260,63 +284,41 @@
       }
     }
 
-    // Die neue Split-Mathematik
+    // Split Logik beim Wischen
     function splitMoney(direction, price) {
       let payerIndex = parseInt(document.getElementById("payerSelect").value);
-      
-      // 1. Der Käufer bekommt das Geld gutgeschrieben
       balances[payerIndex] += price;
 
-      // 2. Den Leuten, denen der Artikel gehört, wird es abgezogen
-      if (direction === "left") {
-        balances[0] -= price;
-      } 
-      else if (direction === "right") {
-        balances[1] -= (price / 2);
-        balances[2] -= (price / 2);
-      } 
-      else if (direction === "down") {
-        balances[0] -= (price / 3);
-        balances[1] -= (price / 3);
-        balances[2] -= (price / 3);
-      }
+      if (direction === "left") balances[0] -= price;
+      else if (direction === "right") { balances[1] -= (price / 2); balances[2] -= (price / 2); }
+      else if (direction === "down") { balances[0] -= (price / 3); balances[1] -= (price / 3); balances[2] -= (price / 3); }
       
-      // Update in die Cloud pushen
       db.ref("balances").set(balances);
     }
 
-    // Drag Logic
+    // Wisch-Mechanismus
     let isDragging = false, startX = 0, startY = 0, currentX = 0, currentY = 0;
-
     function dragStart(e) {
-      if (currentItemIndex >= receipt.length || card.classList.contains("hidden")) return;
+      if (!receipt || currentItemIndex >= receipt.length || card.classList.contains("hidden")) return;
       isDragging = true; card.classList.add("dragging");
       startX = e.type.includes("mouse") ? e.pageX : e.touches[0].pageX; startY = e.type.includes("mouse") ? e.pageY : e.touches[0].pageY;
       if(e.type.includes("touch")) e.preventDefault(); 
     }
-
     function dragMove(e) {
       if (!isDragging) return;
       let x = e.type.includes("mouse") ? e.pageX : e.touches[0].pageX, y = e.type.includes("mouse") ? e.pageY : e.touches[0].pageY;
       currentX = x - startX; currentY = y - startY;
       card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${currentX * 0.1}deg)`;
     }
-
     function dragEnd() {
       if (!isDragging) return;
       isDragging = false; card.classList.remove("dragging");
-      
-      let price = receipt[currentItemIndex].price;
-      let threshold = 80;
-
+      let price = receipt[currentItemIndex].price; let threshold = 80;
       if (currentX < -threshold) { splitMoney("left", price); currentItemIndex++; } 
       else if (currentX > threshold) { splitMoney("right", price); currentItemIndex++; } 
       else if (currentY > threshold && Math.abs(currentX) < threshold) { splitMoney("down", price); currentItemIndex++; }
-
-      loadNextItem();
-      currentX = 0; currentY = 0;
+      loadNextItem(); currentX = 0; currentY = 0;
     }
-
     card.addEventListener("mousedown", dragStart); document.addEventListener("mousemove", dragMove); document.addEventListener("mouseup", dragEnd);
     card.addEventListener("touchstart", dragStart, {passive: false}); document.addEventListener("touchmove", dragMove, {passive: false}); document.addEventListener("touchend", dragEnd);
 
