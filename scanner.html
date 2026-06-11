@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Scanner</title>
+  <style>
+    body { background: #121212; color: white; padding: 20px; font-family: sans-serif; }
+    .btn { background: #3b82f6; color: white; padding: 20px; width: 100%; border: none; border-radius: 12px; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h1>📸 KI Scanner</h1>
+  <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleImage(event)">
+  <button class="btn" onclick="document.getElementById('cameraInput').click()">Foto vom Bon machen</button>
+  
+  <script>
+    async function handleImage(e) {
+      const apiKey = localStorage.getItem("geminiApiKey");
+      if(!apiKey) return alert("API Key in index.html Einstellungen speichern!");
+      
+      // KI-Logik hier rein... (Hier bauen wir dann die Gemini Verbindung ein)
+      alert("KI-Analyse startet...");
+    }
+  </script>
+</body>
+</html>
